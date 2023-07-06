@@ -13,9 +13,17 @@ namespace Tests.User.Api.Controllers
         [Route("api/users")]
         public IActionResult Get(int id)
         {
-            DatabaseContext database = new DatabaseContext();
-            Models.User user = database.Users.Where(user => user.Id == id).First();
-            return Ok(user);
+            using (var database = new DatabaseContext()){
+                try
+                {
+                    Models.User user = database.Users.Where(user => user.Id == id).First();
+                    return Ok(user);
+                }
+                catch (Exception ex)
+                {
+                    return NotFound($"Employee with Id = {id} not found");
+                }
+            }
         }
 
         /// <summary>
@@ -27,17 +35,27 @@ namespace Tests.User.Api.Controllers
         /// <returns></returns>
         [HttpPost]
         [Route("api/users")]
-        public IActionResult Create(string firstName, string lastName, string age)
+        public IActionResult Create([FromBody]Models.UserAddModel userAddModel)
         {
-            DatabaseContext Database = new DatabaseContext();
-            Database.Users.Add(new Models.User
+            using (var database = new DatabaseContext())
             {
-                Age = age,
-                FirstName = firstName,
-                LastName = lastName
-            });
-            Database.SaveChanges();
-            return Ok();
+                if (ModelState.IsValid)
+                {
+                    Models.User user = new Models.User
+                    {
+                        FirstName = userAddModel.FirstName,
+                        LastName = userAddModel.LastName,
+                        Age = userAddModel.Age
+                    };
+                    database.Users.Add(user);
+                    database.SaveChanges();
+                    return Ok(user.Id);
+                }
+                else
+                {
+                    return BadRequest();
+                }
+            }
         }
 
         /// <summary>
@@ -50,22 +68,37 @@ namespace Tests.User.Api.Controllers
         /// <returns></returns>
         [HttpPut]
         [Route("api/users")]
-        public IActionResult Update(int id, string firstName, string lastName, string age)
+        public IActionResult Update([FromBody]Models.User userUpdated)
         {
-            DatabaseContext Database = new DatabaseContext();
-            Database.Users.Update(new Models.User
+            using (var database = new DatabaseContext())
             {
-                Age = age,
-                FirstName = firstName,
-                LastName = lastName,
-                Id = id
-            });
-            Database.SaveChanges();
-            return Ok();
+                if (ModelState.IsValid)
+                {
+                    try
+                    {
+                        Models.User user = database.Users.Where(user => user.Id == userUpdated.Id).First();
+                        user.Age = userUpdated.Age;
+                        user.FirstName = userUpdated.FirstName;
+                        user.LastName = userUpdated.LastName;
+                        database.Users.Update(user);
+                        database.SaveChanges();
+                        return Ok(user);
+                    }
+                    catch (Exception ex)
+                    {
+                        return NotFound($"Employee with Id = {userUpdated.Id} not found");
+                    }
+                }
+                else
+                {
+                    return BadRequest();
+                }
+
+            }
         }
 
         /// <summary>
-        ///     Delets a user
+        ///     Deletes a user
         /// </summary>
         /// <param name="id">ID of the user</param>
         /// <returns></returns>
@@ -73,13 +106,20 @@ namespace Tests.User.Api.Controllers
         [Route("api/users")]
         public IActionResult Delete(int id)
         {
-            DatabaseContext database = new DatabaseContext();
-            database.Users.Remove(new Models.User
+            using (var database = new DatabaseContext())
             {
-                Id = id
-            });
-            database.SaveChanges();
-            return Ok();
+                try
+                {
+                    Models.User user = database.Users.Where(user => user.Id == id).First();
+                    database.Users.Remove(user);
+                    database.SaveChanges();
+                    return Ok();
+                }
+                catch (Exception ex)
+                {
+                    return NotFound($"Employee with Id = {id} not found");
+                }
+            }
         }
     }
 }
